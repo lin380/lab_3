@@ -1,0 +1,163 @@
+---
+title: 'Lab #3 (model)'
+author: "Jerid Francom"
+date: "9/8/2021"
+output:
+  pdf_document: 
+    df_print: kable
+    toc: yes
+    number_sections: yes
+  html_document: 
+    number_sections: yes
+    df_print: kable
+    toc: yes
+---
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(tadr)
+```
+
+# Package data
+
+- Describe the type of data that is represented in the `swda` dataset. 
+
+As described in the R documentation for the tadr pacakge (`?swda`), the `swda` dataset contains the [Switchboard Dialogue Act Corpus](https://catalog.ldc.upenn.edu/docs/LDC97S62/). This is a corpus which contains 1,155 short conversations from over 400 American English speakers. The dataset includes information about the conversations (utterance text, number of utterances, naturalness, etc.) and the speakers themselves (sex, birth year, dialect area, etc.).
+
+- Provide an overview ('glimpse' hint, hint) of the structure of the dataset (rows, columns, column types).
+
+```{r swda-overview}
+glimpse(swda)
+```
+
+- Describe what the values in `dialect_area` represent. 
+
+Looking at the R documentation, `dialect_area` represents the region from the US where the speaker spent their first 10 years.
+
+- Subset the dataset and only select the `doc_id`, `speaker_id`, `sex`, and `dialect_area` columns. Assign the result to a new object (`swda_sex_dialect`).
+
+```{r swda-select-key-columns}
+swda_sex_dialect <- 
+  swda %>% 
+  select(doc_id, speaker_id, sex, dialect_area)
+```
+
+- Show the first 10 rows of the `swda_sex_dialect` object. (Use `slice_head`.)
+
+```{r swda-sex-dialect-head}
+slice_head(swda_sex_dialect, n = 10)
+```
+
+- Find out how many women versus men there are in this corpus. (Isolate the rows for which there are distinct value pairs for `speaker_id` and `sex`, group by `sex`, and then count the grouped rows.)
+
+```{r swda-sex-dialect-sex-count}
+swda_sex_dialect %>% 
+  distinct(speaker_id, sex) %>% 
+  group_by(sex) %>% 
+  count()
+```
+
+- Find out which dialect area has the most represented speakers in this corpus. (Isolate the rows for which there are distinct value pairs for `speaker_id` and `dialect_area`, group by `dialect_area`, and then counting the grouped rows. You may want to arrange the results so that the largest counts (`n`) appear in descending order.)
+
+```{r swda-sex-dialect-dialect-count}
+swda_sex_dialect %>% 
+  distinct(speaker_id, dialect_area) %>% 
+  group_by(dialect_area) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+# Local data
+
+- Read the `endangered_languages.csv` dataset and assign it to a new object (`end_langs`).
+
+```{r read-endangered-languages}
+end_langs <- read_csv("data/endangered_languages.csv")
+```
+
+- Provide an overview of the structure of the dataset (rows, columns, column types). 
+
+```{r end-langs-overview}
+glimpse(end_langs)
+```
+
+- Visit [the source of this data](https://www.theguardian.com/news/datablog/2011/apr/15/language-extinct-endangered). Describe what this dataset represents. 
+
+...
+
+- Find the distinct values for the `degree_of_endangerment` column.
+
+```{r end-langs-dofeng}
+end_langs %>% 
+  distinct(degree_of_endangerment)
+```
+
+
+- Based on the source site, briefly describe what each value of `degree_of_endangerment` means.
+
+...
+
+
+- Filter the dataset to only return the 'Vulnerable' languages and assign the result to a new object (`end_langs_vulnerable`). 
+
+```{r end-langs-vulnerable}
+end_langs_vulnerable <- 
+  end_langs %>% 
+  filter(degree_of_endangerment == "Vulnerable")
+```
+
+
+- With the new object (`end_langs_vulnerable`), identify the five 'Vulnerable' languages with the *most* speakers in the `end_langs` dataset.
+
+```{r end-langs-vulnerable-top}
+end_langs_vulnerable %>% 
+  arrange(desc(number_of_speakers)) %>% 
+  slice_head(n = 5)
+```
+
+- Write the `end_langs_vulnerable` object to a plain-text file (.csv or .tsv) in the `data/` directory. Give it the same name as the object with the extension (.csv or .tsv).  
+
+```{r write-end-langs-vulnerable}
+write_csv(end_langs_vulnerable, file = "data/end_langs_vulnerable.csv")
+```
+
+- Copy and paste the following code into a new code chunk and provide some interpretation of what this plot shows or suggests. 
+
+```{r map-end-langs}
+end_langs_factor <-
+  end_langs %>%
+  mutate(degree_of_endangerment = factor(
+    degree_of_endangerment,
+    levels = c(
+      "Vulnerable",
+      "Definitely endangered",
+      "Severely endangered",
+      "Critically endangered",
+      "Extinct"
+    )
+  ))
+world_map <-
+  map_data(map = "world") %>%
+  filter(region != "Antarctica")
+
+ggplot(data = world_map, aes(long, lat)) +
+  geom_polygon(aes(group = group), fill = "white", color = "grey50") +
+  geom_point(
+    data = end_langs_factor,
+    aes(x = longitude,
+        y = latitude,
+        color = degree_of_endangerment),
+    size = .5
+  ) +
+  scale_color_discrete(direction = -1) +
+  theme(legend.position = "bottom", legend.direction = "vertical") +
+  labs(
+    title = "Endangered Languages",
+    y = "",
+    x = "",
+    color = "Degree of endangerment"
+  )
+```
+
+
+
